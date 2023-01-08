@@ -17,10 +17,12 @@
 package web
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -84,6 +86,10 @@ func (resp *SimpleResponse) Get() http.ResponseWriter {
 
 func (resp *SimpleResponse) Set(w http.ResponseWriter) {
 	resp.ResponseWriter = w
+}
+
+func (resp *SimpleResponse) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return resp.ResponseWriter.(http.Hijacker).Hijack()
 }
 
 // Context 封装 *http.Request 和 http.ResponseWriter 对象，简化操作接口。
@@ -282,6 +288,13 @@ func (w *BufferedResponseWriter) Size() int {
 // Body 返回发送给客户端的数据，当前仅支持 MIMEApplicationJSON 格式.
 func (w *BufferedResponseWriter) Body() string {
 	return w.buf.String()
+}
+
+func (w *BufferedResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if w.size < 0 {
+		w.size = 0
+	}
+	return w.ResponseWriter.(http.Hijacker).Hijack()
 }
 
 func filterFlags(content string) string {
